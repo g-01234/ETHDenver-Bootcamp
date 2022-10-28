@@ -2,14 +2,10 @@ pragma solidity ^0.8.0;
 
 // SPDX-License-Identifier: UNLICENSED
 
-// Fixed ownable usage (seems like bad practice to overwrite _owner)
+// HW8
+// Updated to support foundry
 
-// Question 1: Making the payments mapping private and writing a getter function
-// gives us a bit more flexibility around how we allow users to access the variable,
-// should we need it. It also prevents any inheriting contract from erroneously
-// changing key variables.
-
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 
 contract VolcanoCoin is Ownable {
     struct Payment {
