@@ -13,7 +13,6 @@ contract VolcanoNFT is ERC721Enumerable, Ownable {
 
     function mint(address to) public {
         uint mintIndex = totalSupply();
-        console.log(mintIndex);
         require(mintIndex < MAX_SUPPLY, "Max supply reached");
         _safeMint(to, mintIndex);
     }
