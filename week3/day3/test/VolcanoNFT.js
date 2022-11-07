@@ -5,17 +5,31 @@ const hre = require("hardhat");
 
 describe("VolcanoNFT", function () {
   async function deployContract() {
+    const VolcanoCoin = await hre.ethers.getContractFactory("VolcanoCoin");
+    const volcanoCoin = await VolcanoCoin.deploy();
+    await volcanoCoin.deployed();
+
     const VolcanoNFT = await hre.ethers.getContractFactory("VolcanoNFT");
-    const volcanoNFT = await VolcanoNFT.deploy();
-    const [deployer, otherOne, otherTwo] = await ethers.getSigners();
+    const volcanoNFT = await VolcanoNFT.deploy(volcanoCoin.address);
     await volcanoNFT.deployed();
-    return { volcanoNFT, deployer, otherOne, otherTwo };
+
+    const [deployer, addr1, addr2] = await ethers.getSigners();
+    return { volcanoNFT, volcanoCoin, deployer, addr1, addr2 };
   }
 
   describe("Deploying", function () {
+    // NFT contract should have deployer as owner
     it("Should have the deployer as the owner", async function () {
       const { volcanoNFT, deployer } = await loadFixture(deployContract);
       expect(await volcanoNFT.owner()).to.equal(deployer.address);
+    });
+
+    // Deployer has total supply of VolcanoCoin
+    it("Should allocate the deployer with total supply of VolcanoCoin", async function () {
+      const { volcanoCoin, deployer } = await loadFixture(deployContract);
+      expect(await volcanoCoin.balanceOf(deployer.address)).to.equal(
+        await volcanoCoin.totalSupply()
+      );
     });
   });
 
@@ -55,31 +69,49 @@ describe("VolcanoNFT", function () {
         })
       ).to.be.revertedWith("Incorrect ETH value");
     });
+
+    it("Should allow users to mint with volcanoCoin", async function () {
+      const { volcanoNFT, volcanoCoin, deployer } = await loadFixture(
+        deployContract
+      );
+      const price = await volcanoNFT.TOKEN_PRICE();
+      await volcanoCoin.approve(volcanoNFT.address, price);
+      await volcanoNFT.mintWithVolcanoCoin(deployer.address);
+      expect(await volcanoNFT.totalSupply()).to.equal(1);
+    });
+
+    it("Should not allow you to mint with someone else's VolcanoCoin", async function () {
+      const { volcanoNFT, volcanoCoin, deployer, addr1 } = await loadFixture(
+        deployContract
+      );
+      const tokenPrice = await volcanoNFT.TOKEN_PRICE();
+      await volcanoCoin.approve(volcanoNFT.address, tokenPrice);
+
+      await expect(
+        volcanoNFT.connect(addr1).mintWithVolcanoCoin(deployer.address)
+      ).to.be.reverted;
+    });
   });
 
   describe("Transferring", function () {
     it("Should transfer an NFT", async function () {
-      const { volcanoNFT, deployer, otherOne } = await loadFixture(
-        deployContract
-      );
+      const { volcanoNFT, deployer, addr1 } = await loadFixture(deployContract);
       await volcanoNFT.mintWithETH(deployer.address, {
         value: ethers.utils.parseEther(".01"),
       });
-      await volcanoNFT.transferFrom(deployer.address, otherOne.address, 0);
-      expect(await volcanoNFT.ownerOf(0)).to.equal(otherOne.address);
+      await volcanoNFT.transferFrom(deployer.address, addr1.address, 0);
+      expect(await volcanoNFT.ownerOf(0)).to.equal(addr1.address);
     });
 
     it("Should not allow transferring when not owner", async function () {
-      const { volcanoNFT, deployer, otherOne } = await loadFixture(
-        deployContract
-      );
+      const { volcanoNFT, deployer, addr1 } = await loadFixture(deployContract);
       await volcanoNFT.mintWithETH(deployer.address, {
         value: ethers.utils.parseEther(".01"),
       });
       await expect(
         volcanoNFT
-          .connect(otherOne)
-          .transferFrom(deployer.address, otherOne.address, 0)
+          .connect(addr1)
+          .transferFrom(deployer.address, addr1.address, 0)
       ).to.be.revertedWith("ERC721: caller is not token owner nor approved");
     });
   });
@@ -92,12 +124,10 @@ describe("VolcanoNFT", function () {
     });
 
     it("Should only allow the owner to set the base URI", async function () {
-      const { volcanoNFT, deployer, otherOne } = await loadFixture(
-        deployContract
-      );
+      const { volcanoNFT, deployer, addr1 } = await loadFixture(deployContract);
 
       await expect(
-        volcanoNFT.connect(otherOne).setBaseURI("https://example.com/")
+        volcanoNFT.connect(addr1).setBaseURI("https://example.com/")
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });

@@ -5,24 +5,44 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+import "./VolcanoCoin.sol";
+
 import "hardhat/console.sol";
 
-// Question 3: Allowing the owner to change the metadata URI could result in
-// a compromised owner changing the metadata URI to a malicious URI. However,
-// NFT projects frequently include a "reveal", where the owner sets a new URI.
-// I implemented a "freeze" function that prevents the owner from changing the
-// metadata URI once the bool is set.
+interface IVolcanoCoin {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external;
+}
 
 contract VolcanoNFT is ERC721Enumerable, Ownable {
     uint public immutable MAX_SUPPLY = 100;
+    uint public immutable ETH_PRICE = .01 ether;
+    uint public immutable TOKEN_PRICE = 100;
     string public baseURI;
     bool public metadataFrozen;
+    VolcanoCoin public volcanoCoin;
 
-    constructor() ERC721("Volcano NFT", "VOLCANO") {}
+    constructor(address _volcanoCoin) ERC721("Volcano NFT", "VOLCANO") {
+        volcanoCoin = VolcanoCoin(_volcanoCoin);
+    }
 
     // Allow a user to mint a Volcano NFT for .01 ETH
     function mintWithETH(address to) public payable {
         require(msg.value == 0.01 ether, "Incorrect ETH value");
+        require(totalSupply() < MAX_SUPPLY, "Max supply reached");
+        uint mintIndex = totalSupply();
+        _safeMint(to, mintIndex);
+    }
+
+    function mintWithVolcanoCoin(address to) public {
+        require(
+            volcanoCoin.transferFrom(msg.sender, address(this), TOKEN_PRICE),
+            "Unable to transfer VolcanoCoin"
+        );
+
         require(totalSupply() < MAX_SUPPLY, "Max supply reached");
         uint mintIndex = totalSupply();
         _safeMint(to, mintIndex);
