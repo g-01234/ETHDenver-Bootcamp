@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "dotenv": "^16.0.3",
+    "ethers": "^5.7.2"
+  }
+}
