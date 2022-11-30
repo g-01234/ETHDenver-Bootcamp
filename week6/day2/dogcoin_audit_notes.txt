@@ -1,0 +1,11 @@
+Below are the major points that I would include in a report to the team.
+
+1. (Critical) addPlayer() requires that msg.value is 1 wei, not 1 ether. Similarly payout requires the balance is 100 wei, not ether.
+2. (Critical) nyone can call addWinner(), adding themselves to the list of winners
+3. (Critical) An attacker could add their own address to the winners array an unlimited number of times. This would result in the attacker receiving an outsized amount of the pot. In an extreme case, the attacker could add so many addresses that the gas cost required to call payout() would be greater than the block gas limit, resulting in a denial of service + locking the ether in the contract permanently.
+4. (Low) Off-by-one error in checking if the number of players is equal to 200
+
+
+I would recommend implementing access controls/internal visibility to restrict who is able to call payout functions directly (if anyone). If the goal is to avoid having any type of admin in case of emergency, the team needs to take care to handle force-sent ether via selfdestruct. I would also recommend implementing unit tests, which would likely have uncovered issue #1. 
+
+Additionally, based on the spec there does not appear to be a reason for this contract to inherit from ERC20 or implement any ERC20 functionality.. 
